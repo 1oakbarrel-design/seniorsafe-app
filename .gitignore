@@ -1,0 +1,5 @@
+seniorsafe
+node_modules/
+android/
+ios/
+.DS_Store

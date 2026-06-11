@@ -1,0 +1,11 @@
+{
+  "appId": "com.purityapps.seniorsafe",
+  "appName": "SeniorSafe",
+  "webDir": "frontend",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#16a34a"
+  }
+}
