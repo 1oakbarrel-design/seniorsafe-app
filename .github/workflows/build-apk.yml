@@ -1,12 +1,13 @@
-name: Build Android APK
+name: Build Signed Release AAB
 on:
   push:
     branches: [main]
   workflow_dispatch:
-
 jobs:
   build-android:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node.js
@@ -26,14 +27,22 @@ jobs:
         run: |
           if [ ! -d android ]; then npx cap add android; fi
           npx cap sync android
-      - name: Build debug APK
+      - name: Decode keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > ${{ github.workspace }}/purityapps-release.keystore
+      - name: Build signed release AAB
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
-      - name: Upload APK
+          ./gradlew bundleRelease             -Pandroid.injected.signing.store.file=${{ github.workspace }}/purityapps-release.keystore             -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }}             -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }}             -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
+      - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
-          name: seniorsafe-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: signed-release-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 30
+      - name: Create GitHub Release
+        run: |
+          AAB="android/app/build/outputs/bundle/release/app-release.aab"
+          gh release create v1.0.0 "$AAB"             --title "v1.0.0 - Signed Release"             --notes "Signed release AAB. Install via Google Play or use bundletool to extract APK."             --repo ${{ github.repository }} 2>/dev/null ||           gh release upload v1.0.0 "$AAB" --repo ${{ github.repository }} --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
